@@ -26,16 +26,23 @@ const AirControl: React.FC = () => {
 
   const handleTemperatureChange = async (value: number[]) => {
     const newTemp = value[0];
+    const oldTemp = temperature;
     setTemperature(newTemp);
     
-    // Вибрация зависит от разницы с комфортной температурой (22°C)
-    const tempDiff = Math.abs(newTemp - 22);
-    if (tempDiff > 5) {
-      await vibrate(ImpactStyle.Heavy);
-    } else if (tempDiff > 2) {
-      await vibrate(ImpactStyle.Medium);
-    } else {
-      await vibrate(ImpactStyle.Light);
+    // Проверяем, пересекли ли мы порог в 3 градуса
+    const oldThreshold = Math.floor(oldTemp / 3);
+    const newThreshold = Math.floor(newTemp / 3);
+    
+    if (oldThreshold !== newThreshold) {
+      // Вибрация зависит от разницы с комфортной температурой (22°C)
+      const tempDiff = Math.abs(newTemp - 22);
+      if (tempDiff > 5) {
+        await vibrate(ImpactStyle.Heavy);
+      } else if (tempDiff > 2) {
+        await vibrate(ImpactStyle.Medium);
+      } else {
+        await vibrate(ImpactStyle.Light);
+      }
     }
   };
 

@@ -28,15 +28,22 @@ const LightControl: React.FC<LightControlProps> = ({ zone }) => {
 
   const handleBrightnessChange = async (value: number[]) => {
     const newBrightness = value[0];
+    const oldBrightness = brightness;
     setBrightness(newBrightness);
     
-    // Вибрация зависит от интенсивности света
-    if (newBrightness > 80) {
-      await vibrate(ImpactStyle.Heavy);
-    } else if (newBrightness > 40) {
-      await vibrate(ImpactStyle.Medium);
-    } else {
-      await vibrate(ImpactStyle.Light);
+    // Проверяем, пересекли ли мы порог в 10%
+    const oldThreshold = Math.floor(oldBrightness / 10);
+    const newThreshold = Math.floor(newBrightness / 10);
+    
+    if (oldThreshold !== newThreshold) {
+      // Вибрация зависит от того, насколько яркий свет
+      if (newBrightness > 80) {
+        await vibrate(ImpactStyle.Heavy);
+      } else if (newBrightness > 40) {
+        await vibrate(ImpactStyle.Medium);
+      } else {
+        await vibrate(ImpactStyle.Light);
+      }
     }
   };
 
