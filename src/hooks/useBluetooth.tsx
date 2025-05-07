@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { toast } from "sonner";
 
@@ -14,7 +13,7 @@ export const useBluetooth = () => {
 
   // Simulate Bluetooth functionality
   const connectToDoor = async () => {
-    if (!navigator.bluetooth && !window.navigator.bluetooth) {
+    if (!navigator.bluetooth) {
       toast.error("Bluetooth не поддерживается в этом браузере.");
       return false;
     }
