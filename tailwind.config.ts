@@ -64,14 +64,15 @@ export default {
 					ring: 'hsl(var(--sidebar-ring))'
 				},
 				hotel: {
-					'blue': '#3B82F6',
-					'light-blue': '#93C5FD',
+					'blue': '#2596be',
+					'light-blue': '#8ecbe4',
 					'amber': '#F59E0B',
 					'light-amber': '#FCD34D',
 					'gray': '#4B5563',
 					'light-gray': '#F3F4F6',
 					'background': '#FFFFFF',
-					'card': '#F9FAFB'
+					'card': '#F9FAFB',
+					'green': '#22543d'
 				}
 			},
 			borderRadius: {
