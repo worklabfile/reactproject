@@ -1,11 +1,37 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+
+import React, { useState } from 'react';
+import RoomHeader from '@/components/RoomHeader';
+import DoorControl from '@/components/DoorControl';
+import LightControl from '@/components/LightControl';
+import AirControl from '@/components/AirControl';
+import StatusBar from '@/components/StatusBar';
 
 const Index = () => {
+  const [doNotDisturb, setDoNotDisturb] = useState(false);
+
+  const toggleDoNotDisturb = () => {
+    setDoNotDisturb(!doNotDisturb);
+  };
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">Welcome to Your Blank App</h1>
-        <p className="text-xl text-gray-600">Start building your amazing project here!</p>
+    <div className="min-h-screen bg-gray-50">
+      <div className="container max-w-md mx-auto px-4 py-6">
+        <RoomHeader roomNumber="507" guestName="Алексей" />
+        
+        <StatusBar 
+          doNotDisturb={doNotDisturb} 
+          toggleDoNotDisturb={toggleDoNotDisturb} 
+        />
+        
+        <DoorControl />
+        
+        <div className="mb-6">
+          <h2 className="text-lg font-medium text-gray-900 mb-3">Управление светом</h2>
+          <LightControl zone="Основной" />
+          <LightControl zone="Ванная" />
+        </div>
+        
+        <AirControl />
       </div>
     </div>
   );
