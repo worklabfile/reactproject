@@ -1,7 +1,6 @@
-
 import React, { useState } from 'react';
 import RoomHeader from '@/components/RoomHeader';
-import DoorControl from '@/components/DoorControl';
+import { DoorControl } from '@/components/DoorControl';
 import LightControl from '@/components/LightControl';
 import AirControl from '@/components/AirControl';
 import StatusBar from '@/components/StatusBar';

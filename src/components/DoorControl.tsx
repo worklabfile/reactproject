@@ -1,29 +1,131 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { BluetoothService } from '../services/bluetooth';
+import { NotificationService } from '../services/notifications';
 import { DoorOpen, DoorClosed, Bluetooth } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useBluetooth } from '@/hooks/useBluetooth';
 import { Card } from '@/components/ui/card';
+import { Haptics } from '@capacitor/haptics';
 
-const DoorControl: React.FC = () => {
-  const { isConnected, isConnecting, unlockDoor } = useBluetooth();
-  const [isUnlocking, setIsUnlocking] = useState(false);
-  const [doorOpen, setDoorOpen] = useState(false);
+const bluetoothService = new BluetoothService();
+const notificationService = NotificationService.getInstance();
 
-  const handleUnlock = async () => {
+export const DoorControl: React.FC = () => {
+  const [isConnected, setIsConnected] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [isDoorOpen, setIsDoorOpen] = useState(false);
+
+  const vibrate = async (type: 'light' | 'medium' | 'heavy' = 'medium') => {
     try {
-      setIsUnlocking(true);
-      const success = await unlockDoor();
+      switch (type) {
+        case 'light':
+          await Haptics.impact({ style: 'light' });
+          break;
+        case 'medium':
+          await Haptics.impact({ style: 'medium' });
+          break;
+        case 'heavy':
+          await Haptics.impact({ style: 'heavy' });
+          break;
+      }
+    } catch (error) {
+      console.error('Error triggering haptic feedback:', error);
+    }
+  };
+
+  useEffect(() => {
+    // Инициализация уведомлений при монтировании компонента
+    notificationService.initialize();
+    vibrate('light');
+
+    // Настройка периодических уведомлений о состоянии двери
+    const setupPeriodicNotifications = async () => {
+      await notificationService.scheduleRepeatingNotification(
+        'Проверка состояния двери',
+        'Проверьте, что дверь надежно закрыта',
+        'day' // каждые 24 часа
+      );
+    };
+
+    setupPeriodicNotifications();
+  }, []);
+
+  const handleConnect = async () => {
+    setIsConnecting(true);
+    await vibrate('medium');
+    try {
+      const devicesFound = await bluetoothService.requestDevice();
+      if (devicesFound) {
+        const connected = await bluetoothService.connect();
+        setIsConnected(connected);
+        if (connected) {
+          await vibrate('heavy');
+          await notificationService.showImportantNotification(
+            'Подключение установлено',
+            'Устройство успешно подключено'
+          );
+        }
+      }
+    } catch (error) {
+      console.error('Ошибка при подключении:', error);
+      await vibrate('heavy');
+      await notificationService.showImportantNotification(
+        'Ошибка подключения',
+        'Не удалось подключиться к устройству'
+      );
+    } finally {
+      setIsConnecting(false);
+    }
+  };
+
+  const handleDisconnect = async () => {
+    await vibrate('medium');
+    await bluetoothService.disconnect();
+    setIsConnected(false);
+    await vibrate('heavy');
+    await notificationService.showImportantNotification(
+      'Отключено',
+      'Устройство отключено'
+    );
+  };
+
+  const handleDoorToggle = async () => {
+    if (!isConnected) {
+      await vibrate('heavy');
+      await notificationService.showImportantNotification(
+        'Ошибка',
+        'Сначала подключитесь к устройству'
+      );
+      return;
+    }
+
+    try {
+      const command = isDoorOpen ? 'CLOSE' : 'OPEN';
+      await vibrate('medium');
+      const success = await bluetoothService.sendCommand(command);
       
       if (success) {
-        setDoorOpen(true);
-        // Reset door state after a delay
-        setTimeout(() => {
-          setDoorOpen(false);
-        }, 3000);
+        setIsDoorOpen(!isDoorOpen);
+        await vibrate('heavy');
+        await notificationService.showDoorNotification(!isDoorOpen);
+        
+        // Дополнительное уведомление через 5 минут
+        setTimeout(async () => {
+          if (!isDoorOpen) {
+            await vibrate('light');
+            await notificationService.showRegularNotification(
+              'Напоминание',
+              'Проверьте, что дверь надежно закрыта'
+            );
+          }
+        }, 5 * 60 * 1000);
       }
-    } finally {
-      setIsUnlocking(false);
+    } catch (error) {
+      console.error('Ошибка при управлении дверью:', error);
+      await vibrate('heavy');
+      await notificationService.showImportantNotification(
+        'Ошибка',
+        'Не удалось выполнить команду'
+      );
     }
   };
 
@@ -40,38 +142,66 @@ const DoorControl: React.FC = () => {
       <div className="flex flex-col items-center py-6">
         <div className={`w-24 h-24 flex items-center justify-center rounded-full 
           transition-all duration-500 ease-in-out transform
-          ${doorOpen 
+          ${isDoorOpen 
             ? 'bg-green-100 text-green-500 scale-110' 
-            : isUnlocking 
+            : isConnecting 
               ? 'bg-blue-100 text-hotel-blue animate-pulse' 
               : 'bg-gray-100 text-gray-500'
           } 
-          mb-6 ${isUnlocking ? 'animate-unlock' : ''}`}>
-          {doorOpen ? 
+          mb-6 ${isConnecting ? 'animate-unlock' : ''}`}>
+          {isDoorOpen ? 
             <DoorOpen className="w-12 h-12" /> : 
             <DoorClosed className="w-12 h-12" />}
         </div>
         
-        <Button 
-          onClick={handleUnlock}
-          disabled={isUnlocking || isConnecting}
-          className={`w-full py-3 rounded-lg shadow-md transition-all duration-300 
-            ${doorOpen 
-              ? 'bg-green-500 hover:bg-green-600' 
-              : 'bg-hotel-blue hover:bg-blue-600'
-            } text-white text-lg font-medium`}
-        >
-          {isUnlocking ? 'Открываем...' : doorOpen ? 'Дверь открыта' : 'Открыть дверь'}
-        </Button>
+        <div className="flex space-x-4">
+          {!isConnected ? (
+            <Button 
+              onClick={handleConnect}
+              disabled={isConnecting}
+              className={`px-4 py-2 rounded-lg ${
+                isConnecting
+                  ? 'bg-gray-400 cursor-not-allowed'
+                  : 'bg-blue-500 hover:bg-blue-600'
+              } text-white`}
+            >
+              {isConnecting ? 'Подключение...' : 'Подключиться'}
+            </Button>
+          ) : (
+            <Button 
+              onClick={handleDisconnect}
+              className="px-4 py-2 rounded-lg bg-red-500 hover:bg-red-600 text-white"
+            >
+              Отключиться
+            </Button>
+          )}
+        </div>
         
-        <p className="text-xs text-gray-500 mt-4 text-center">
-          {isConnecting ? 'Подключение к замку...' : 
-           isConnected ? 'Bluetooth-соединение установлено' : 
-           'Нажмите, чтобы подключиться к замку'}
-        </p>
+        <div className="mt-4">
+          <Button 
+            onClick={handleDoorToggle}
+            disabled={!isConnected}
+            className={`px-6 py-3 rounded-lg text-white ${
+              isConnected
+                ? isDoorOpen
+                  ? 'bg-red-500 hover:bg-red-600'
+                  : 'bg-green-500 hover:bg-green-600'
+                : 'bg-gray-400 cursor-not-allowed'
+            }`}
+          >
+            {isDoorOpen ? 'Закрыть дверь' : 'Открыть дверь'}
+          </Button>
+        </div>
+        
+        <div className="mt-4 text-center">
+          <p className="text-lg">
+            Статус: {isConnected ? 'Подключено' : 'Отключено'}
+          </p>
+          <p className="text-lg">
+            Дверь: {isDoorOpen ? 'Открыта' : 'Закрыта'}
+          </p>
+        </div>
       </div>
     </Card>
   );
 };
-
-export default DoorControl;
