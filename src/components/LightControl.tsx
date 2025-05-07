@@ -1,9 +1,9 @@
-
 import React, { useState } from 'react';
 import { Lightbulb, LightbulbOff } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
+import { Haptics, ImpactStyle } from '@capacitor/haptics';
 
 interface LightControlProps {
   zone: string;
@@ -13,12 +13,31 @@ const LightControl: React.FC<LightControlProps> = ({ zone }) => {
   const [isOn, setIsOn] = useState(false);
   const [brightness, setBrightness] = useState(60);
 
-  const toggleLight = () => {
+  const vibrate = async (type: ImpactStyle = ImpactStyle.Medium) => {
+    try {
+      await Haptics.impact({ style: type });
+    } catch (error) {
+      console.error('Error triggering haptic feedback:', error);
+    }
+  };
+
+  const toggleLight = async () => {
+    await vibrate(ImpactStyle.Medium);
     setIsOn(!isOn);
   };
 
-  const handleBrightnessChange = (value: number[]) => {
-    setBrightness(value[0]);
+  const handleBrightnessChange = async (value: number[]) => {
+    const newBrightness = value[0];
+    setBrightness(newBrightness);
+    
+    // Вибрация зависит от интенсивности света
+    if (newBrightness > 80) {
+      await vibrate(ImpactStyle.Heavy);
+    } else if (newBrightness > 40) {
+      await vibrate(ImpactStyle.Medium);
+    } else {
+      await vibrate(ImpactStyle.Light);
+    }
   };
 
   return (

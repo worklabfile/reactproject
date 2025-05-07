@@ -1,22 +1,49 @@
-
 import React, { useState } from 'react';
 import { AirVent } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { Haptics, ImpactStyle } from '@capacitor/haptics';
 
 const AirControl: React.FC = () => {
   const [isOn, setIsOn] = useState(true);
   const [temperature, setTemperature] = useState(23);
   const [mode, setMode] = useState("cool");
 
-  const toggleAir = () => {
+  const vibrate = async (type: ImpactStyle = ImpactStyle.Medium) => {
+    try {
+      await Haptics.impact({ style: type });
+    } catch (error) {
+      console.error('Error triggering haptic feedback:', error);
+    }
+  };
+
+  const toggleAir = async () => {
+    await vibrate(ImpactStyle.Medium);
     setIsOn(!isOn);
   };
 
-  const handleTemperatureChange = (value: number[]) => {
-    setTemperature(value[0]);
+  const handleTemperatureChange = async (value: number[]) => {
+    const newTemp = value[0];
+    setTemperature(newTemp);
+    
+    // Вибрация зависит от разницы с комфортной температурой (22°C)
+    const tempDiff = Math.abs(newTemp - 22);
+    if (tempDiff > 5) {
+      await vibrate(ImpactStyle.Heavy);
+    } else if (tempDiff > 2) {
+      await vibrate(ImpactStyle.Medium);
+    } else {
+      await vibrate(ImpactStyle.Light);
+    }
+  };
+
+  const handleModeChange = async (value: string) => {
+    if (value) {
+      await vibrate(ImpactStyle.Medium);
+      setMode(value);
+    }
   };
 
   return (
@@ -58,7 +85,7 @@ const AirControl: React.FC = () => {
           </div>
         </div>
         
-        <ToggleGroup type="single" value={mode} onValueChange={(value) => value && setMode(value)} disabled={!isOn} className="justify-center">
+        <ToggleGroup type="single" value={mode} onValueChange={(value) => value && handleModeChange(value)} disabled={!isOn} className="justify-center">
           <ToggleGroupItem value="cool" aria-label="Охлаждение" className="text-xs">
             Охлаждение
           </ToggleGroupItem>
