@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -61,14 +60,20 @@ const Login = () => {
     {
       title: "«Аква-Минск»",
       description: "Высокие стандарты обслуживания и атмосфера гостеприимства.",
+      image: "/hotels/aqua-minsk.jpg",
+      bookingLink: "https://aquaminsk.by"
     },
     {
       title: "«Аква-Минск плюс»",
       description: "Современные комфортабельные номера различных категорий.",
+      image: "/hotels/aqua-minsk-plus.jpg",
+      bookingLink: "https://aquaminsk.by/plus"
     },
     {
       title: "Парк-отель «На том берегу»",
       description: "Уникальный комплекс на живописном берегу водохранилища «Дрозды».",
+      image: "/hotels/na-tom-beregu.jpg",
+      bookingLink: "https://aquaminsk.by/park-hotel"
     }
   ];
 
@@ -188,10 +193,25 @@ const Login = () => {
               {hotelCards.map((hotel, index) => (
                 <CarouselItem key={index}>
                   <Card className="hover:shadow-xl transition-all duration-300 h-full backdrop-blur-sm bg-white/80">
+                    <div className="relative h-48 w-full overflow-hidden rounded-t-lg">
+                      <img
+                        src={hotel.image}
+                        alt={hotel.title}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
                     <CardHeader>
                       <CardTitle>{hotel.title}</CardTitle>
                       <CardDescription>{hotel.description}</CardDescription>
                     </CardHeader>
+                    <CardFooter>
+                      <Button 
+                        className="w-full bg-hotel-blue hover:bg-hotel-blue/80"
+                        onClick={() => window.open(hotel.bookingLink, '_blank')}
+                      >
+                        Забронировать
+                      </Button>
+                    </CardFooter>
                   </Card>
                 </CarouselItem>
               ))}
