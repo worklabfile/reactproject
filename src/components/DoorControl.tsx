@@ -4,7 +4,9 @@ import { NotificationService } from '../services/notifications';
 import { DoorOpen, DoorClosed, Bluetooth } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Haptics } from '@capacitor/haptics';
+import { Haptics, ImpactStyle } from '@capacitor/haptics';
+import { Capacitor } from '@capacitor/core';
+import { App } from '@capacitor/app';
 
 const bluetoothService = new BluetoothService();
 const notificationService = NotificationService.getInstance();
@@ -14,28 +16,28 @@ export const DoorControl: React.FC = () => {
   const [isConnecting, setIsConnecting] = useState(false);
   const [isDoorOpen, setIsDoorOpen] = useState(false);
 
-  const vibrate = async (type: 'light' | 'medium' | 'heavy' = 'medium') => {
+  const vibrate = async (type: ImpactStyle = ImpactStyle.Medium) => {
     try {
-      switch (type) {
-        case 'light':
-          await Haptics.impact({ style: 'light' });
-          break;
-        case 'medium':
-          await Haptics.impact({ style: 'medium' });
-          break;
-        case 'heavy':
-          await Haptics.impact({ style: 'heavy' });
-          break;
-      }
+      await Haptics.impact({ style: type });
     } catch (error) {
       console.error('Error triggering haptic feedback:', error);
+    }
+  };
+
+  const updateWidget = async (doorStatus: string) => {
+    if (Capacitor.getPlatform() === 'android') {
+      try {
+        await App.open({ url: `com.example.app://widget?door=${doorStatus}` });
+      } catch (error) {
+        console.error('Error updating widget:', error);
+      }
     }
   };
 
   useEffect(() => {
     // Инициализация уведомлений при монтировании компонента
     notificationService.initialize();
-    vibrate('light');
+    vibrate(ImpactStyle.Light);
 
     // Настройка периодических уведомлений о состоянии двери
     const setupPeriodicNotifications = async () => {
@@ -89,39 +91,24 @@ export const DoorControl: React.FC = () => {
   };
 
   const handleDoorToggle = async () => {
-    if (!isConnected) {
-      await vibrate('heavy');
-      await notificationService.showImportantNotification(
-        'Ошибка',
-        'Сначала подключитесь к устройству'
-      );
-      return;
-    }
-
+    await vibrate(ImpactStyle.Medium);
     try {
-      const command = isDoorOpen ? 'CLOSE' : 'OPEN';
-      await vibrate('medium');
+      const command = isDoorOpen ? 'DOOR_CLOSE' : 'DOOR_OPEN';
       const success = await bluetoothService.sendCommand(command);
       
       if (success) {
         setIsDoorOpen(!isDoorOpen);
-        await vibrate('heavy');
-        await notificationService.showDoorNotification(!isDoorOpen);
-        
-        // Дополнительное уведомление через 5 минут
-        setTimeout(async () => {
-          if (!isDoorOpen) {
-            await vibrate('light');
-            await notificationService.showRegularNotification(
-              'Напоминание',
-              'Проверьте, что дверь надежно закрыта'
-            );
-          }
-        }, 5 * 60 * 1000);
+        await vibrate(ImpactStyle.Heavy);
+        await notificationService.showRegularNotification(
+          'Дверь',
+          isDoorOpen ? 'Дверь закрыта' : 'Дверь открыта'
+        );
+        // Обновляем виджет
+        await updateWidget(isDoorOpen ? 'Closed' : 'Open');
       }
     } catch (error) {
       console.error('Ошибка при управлении дверью:', error);
-      await vibrate('heavy');
+      await vibrate(ImpactStyle.Heavy);
       await notificationService.showImportantNotification(
         'Ошибка',
         'Не удалось выполнить команду'
